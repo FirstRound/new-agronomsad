@@ -1,6 +1,6 @@
 /**
  * Тесты для приложения "Собрано в саду"
- * Запуск: node tests/app.test.js или открыть tests/run_tests.html в браузере
+ * Запуск: открыть tests/run_tests.html в браузере
  */
 
 import { DataManager } from '../src/js/dataManager.js';
@@ -11,15 +11,18 @@ console.log('🧪 Запуск тестов приложения "Собрано
 
 let passed = 0;
 let failed = 0;
+const testResults = [];
 
 function test(name, fn) {
     try {
         fn();
         console.log(`✅ ${name}`);
+        testResults.push({ name, status: 'pass', error: null });
         passed++;
     } catch (error) {
         console.log(`❌ ${name}`);
         console.log(`   Ошибка: ${error.message}`);
+        testResults.push({ name, status: 'fail', error: error.message });
         failed++;
     }
 }
@@ -344,12 +347,12 @@ console.log('='.repeat(60));
 
 if (typeof window !== 'undefined') {
     window.runAllTests = () => failed === 0;
+    window.getTestResults = () => testResults;
+    window.getTestStats = () => ({ passed, failed, total: passed + failed });
 }
 
 if (failed === 0) {
     console.log('\n✅ Все тесты пройдены успешно!\n');
-    if (typeof process !== 'undefined') process.exit(0);
 } else {
     console.log(`\n❌ ${failed} тест(а) не пройдено\n`);
-    if (typeof process !== 'undefined') process.exit(1);
 }
