@@ -2,45 +2,20 @@
 # Dependencies
 node_modules/
 
-# Editor/IDE files
-.vscode/
-.idea/
-*.swp
-*.swo
-*.tmp
-
-# Logs
+# Logs and temp files
 *.log
+*.tmp
 
 # Environment
 .env
 .env.local
 *.env.*
 
-# Build artifacts
+# Editors
+.vscode/
+.idea/
+
+# Build outputs
 dist/
 build/
-*.js.map
-
-# Coverage reports
-coverage/
-htmlcov/
-*.coverage
-
-# Python related (if any Python files detected later)
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-
-# Compressed files
-*.zip
-*.gz
-*.tar
-*.tgz
-*.bz2
-*.xz
-*.7z
-*.rar
-*.zst
 ```
