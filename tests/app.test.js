@@ -55,8 +55,8 @@ test('Парсинг CSV строки', () => {
 test('Поиск по данным (searchInData)', () => {
     const dm = new DataManager();
     dm.processedFeatures = [
-        { properties: { fieldId: '114', sort: 'Golden Delicious', cluster: 'C' } },
-        { properties: { fieldId: '115', sort: 'Conference', cluster: 'B' } }
+        { properties: { fieldId: '114', sort: 'Golden Delicious', cluster: 'C', tableRows: [] } },
+        { properties: { fieldId: '115', sort: 'Conference', cluster: 'B', tableRows: [] } }
     ];
     
     const results = dm.searchInData('golden');

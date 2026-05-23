@@ -178,7 +178,7 @@ export class DataManager {
                 }
             }
         }
-        return Array.from(sorts).sort();
+        return sorts;
     }
 
     /**
@@ -193,7 +193,7 @@ export class DataManager {
                 }
             }
         }
-        return Array.from(clusters).sort();
+        return clusters;
     }
 
     /**
@@ -204,13 +204,19 @@ export class DataManager {
             totalFeatures: this.processedFeatures.length,
             totalArea: 0,
             totalTrees: 0,
+            avgTrees: 0,
             byCluster: {},
             byType: {},
             byCategory: {}
         };
 
+        let treeCount = 0;
+        let featureCount = 0;
+
         for (const rows of Object.values(this.tableData)) {
             for (const row of rows) {
+                featureCount++;
+                
                 // Площадь
                 if (row.areaFact && row.areaFact !== '—') {
                     const area = parseFloat(String(row.areaFact).replace(',', '.'));
@@ -224,6 +230,7 @@ export class DataManager {
                     const trees = parseInt(String(row.trees).replace(/\s/g, ''));
                     if (!isNaN(trees)) {
                         stats.totalTrees += trees;
+                        treeCount++;
                     }
                 }
 
@@ -242,6 +249,11 @@ export class DataManager {
                     stats.byCategory[row.category] = (stats.byCategory[row.category] || 0) + 1;
                 }
             }
+        }
+
+        // Вычисляем среднее
+        if (treeCount > 0) {
+            stats.avgTrees = Math.round(stats.totalTrees / treeCount);
         }
 
         return stats;
@@ -269,6 +281,37 @@ export class DataManager {
                 if (category && row.category !== category) return false;
                 return true;
             });
+        });
+    }
+
+    /**
+     * Поиск по данным (для тестов и внешнего использования)
+     * @param {string} query - Поисковый запрос
+     * @returns {Array} Найденные объекты
+     */
+    searchInData(query) {
+        if (!query || !this.processedFeatures) return [];
+        
+        const lowerQuery = query.toLowerCase();
+        
+        return this.processedFeatures.filter(feature => {
+            const props = feature.properties;
+            
+            // Поиск по номеру участка
+            if (props.fieldId && props.fieldId.toLowerCase().includes(lowerQuery)) {
+                return true;
+            }
+            
+            // Поиск по сортам в таблице данных
+            if (props.tableRows && props.tableRows.length > 0) {
+                for (const row of props.tableRows) {
+                    if (row.sort && row.sort.toLowerCase().includes(lowerQuery)) {
+                        return true;
+                    }
+                }
+            }
+            
+            return false;
         });
     }
 
@@ -358,6 +401,52 @@ export class DataManager {
         }
 
         return { valid: errors.length === 0, errors, warnings };
+    }
+
+    /**
+     * Проверяет, находится ли точка внутри полигона
+     * @param {Array} point - [x, y]
+     * @param {Array} polygon - [[x1, y1], [x2, y2], ...]
+     * @returns {boolean}
+     */
+    isPointInPolygon(point, polygon) {
+        const x = point[0];
+        const y = point[1];
+        let inside = false;
+
+        for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+            const xi = polygon[i][0];
+            const yi = polygon[i][1];
+            const xj = polygon[j][0];
+            const yj = polygon[j][1];
+
+            const intersect = ((yi > y) !== (yj > y)) &&
+                (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+
+            if (intersect) inside = !inside;
+        }
+
+        // Проверка на границе
+        for (let i = 0; i < polygon.length - 1; i++) {
+            const x1 = polygon[i][0];
+            const y1 = polygon[i][1];
+            const x2 = polygon[i + 1][0];
+            const y2 = polygon[i + 1][1];
+
+            // Проверка, лежит ли точка на отрезке
+            const crossProduct = (y - y1) * (x2 - x1) - (x - x1) * (y2 - y1);
+            if (Math.abs(crossProduct) < 1e-10) {
+                const minX = Math.min(x1, x2);
+                const maxX = Math.max(x1, x2);
+                const minY = Math.min(y1, y2);
+                const maxY = Math.max(y1, y2);
+                if (x >= minX && x <= maxX && y >= minY && y <= maxY) {
+                    return true;
+                }
+            }
+        }
+
+        return inside;
     }
 }
 
