@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Тесты - Собрано в саду</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 900px;
+            margin: 40px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        h1 {
+            color: #333;
+            border-bottom: 2px solid #4CAF50;
+            padding-bottom: 10px;
+        }
+        .test-section {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-section h2 {
+            color: #4CAF50;
+            margin-top: 0;
+        }
+        .test-result {
+            padding: 8px 12px;
+            margin: 5px 0;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 13px;
+        }
+        .pass {
+            background: #e8f5e9;
+            color: #2e7d32;
+            border-left: 3px solid #4CAF50;
+        }
+        .fail {
+            background: #ffebee;
+            color: #c62828;
+            border-left: 3px solid #f44336;
+        }
+        .summary {
+            background: #fff;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .summary.pass {
+            border: 2px solid #4CAF50;
+        }
+        .summary.fail {
+            border: 2px solid #f44336;
+        }
+        .btn-run {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-bottom: 20px;
+        }
+        .btn-run:hover {
+            background: #388E3C;
+        }
+        #output {
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Тесты приложения "Собрано в саду"</h1>
+    
+    <button class="btn-run" onclick="runAllTests()">Запустить все тесты</button>
+    
+    <div id="results"></div>
+    
+    <div class="summary" id="summary" style="display:none;">
+        <h2 id="summary-title"></h2>
+        <p id="summary-stats"></p>
+    </div>
+
+    <script type="module">
+        import { DataManager } from '../src/js/dataManager.js';
+        
+        // Экспорт для глобального доступа
+        window.DataManager = DataManager;
+    </script>
+    
+    <script src="../tests/app.test.js"></script>
+    
+    <script>
+        function runAllTests() {
+            const resultsDiv = document.getElementById('results');
+            const summaryDiv = document.getElementById('summary');
+            
+            resultsDiv.innerHTML = '';
+            summaryDiv.style.display = 'none';
+            
+            // Перехват console.log
+            const logs = [];
+            const originalLog = console.log;
+            const originalError = console.error;
+            
+            console.log = (...args) => {
+                logs.push({ type: 'log', message: args.join(' ') });
+            };
+            
+            console.error = (...args) => {
+                logs.push({ type: 'error', message: args.join(' ') });
+            };
+            
+            // Запуск тестов
+            try {
+                const success = window.runAllTests();
+                
+                // Восстановление консоли
+                console.log = originalLog;
+                console.error = originalError;
+                
+                // Отображение результатов
+                let html = '<div class="test-section"><h2>Результаты тестов</h2>';
+                
+                logs.forEach(log => {
+                    const className = log.type === 'error' ? 'fail' : 'pass';
+                    const icon = log.type === 'error' ? '✗' : '✓';
+                    html += `<div class="test-result ${className}">${icon} ${escapeHtml(log.message)}</div>`;
+                });
+                
+                html += '</div>';
+                resultsDiv.innerHTML = html;
+                
+                // Показ сводки
+                summaryDiv.style.display = 'block';
+                summaryDiv.className = 'summary ' + (success ? 'pass' : 'fail');
+                document.getElementById('summary-title').textContent = success ? '✅ Все тесты пройдены!' : '❌ Некоторые тесты не пройдены';
+                document.getElementById('summary-stats').textContent = `Посмотрите детали выше`;
+                
+            } catch (error) {
+                console.log = originalLog;
+                console.error = originalError;
+                
+                resultsDiv.innerHTML = `
+                    <div class="test-section">
+                        <h2>Ошибка при запуске тестов</h2>
+                        <div class="test-result fail">✗ ${escapeHtml(error.message)}</div>
+                        <pre>${escapeHtml(error.stack)}</pre>
+                    </div>
+                `;
+            }
+        }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    </script>
+</body>
+</html>
