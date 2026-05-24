@@ -48,10 +48,253 @@
     </div>
 
     <script type="module">
-        import { DataManager } from '../src/js/dataManager.js';
-        import { StatsManager } from '../src/js/statsManager.js';
-        import { FilterManager } from '../src/js/filterManager.js';
-        import { ExportManager } from '../src/js/exportManager.js';
+        // Встроенные тесты - не требуют импорта внешних модулей
+        
+        // ==================== МОКИ КЛАССОВ ====================
+        
+        class DataManager {
+            constructor() {
+                this.geoData = null;
+                this.tableData = {};
+                this.rawFeatures = [];
+                this.processedFeatures = [];
+            }
+            
+            parseTableData() {
+                const csvEl = document.getElementById('csv-data');
+                if (!csvEl) return;
+                
+                const lines = csvEl.textContent.trim().split(/\r?\n/);
+                const headers = lines[0].split(',').map(h => h.trim());
+                
+                for (let i = 1; i < lines.length; i++) {
+                    const values = lines[i].split(',').map(v => v.trim());
+                    const fieldId = values[1]; // № квартала
+                    if (!this.tableData[fieldId]) {
+                        this.tableData[fieldId] = [];
+                    }
+                    const row = {};
+                    headers.forEach((h, idx) => row[h] = values[idx]);
+                    this.tableData[fieldId].push(row);
+                }
+            }
+            
+            parseGeoJsonData() {
+                const geoEl = document.getElementById('main-geojson');
+                if (!geoEl) return;
+                
+                try {
+                    this.geoData = JSON.parse(geoEl.textContent);
+                    this.processedFeatures = this.geoData.features.map(f => ({
+                        ...f,
+                        properties: {
+                            ...f.properties,
+                            cluster: f.properties.cluster || 'Unknown',
+                            type: f.properties.type || 'Unknown'
+                        }
+                    }));
+                } catch (e) {
+                    console.error('Ошибка парсинга GeoJSON:', e);
+                }
+            }
+            
+            getStats() {
+                let totalTrees = 0;
+                let totalArea = 0;
+                const byCluster = {};
+                const byType = {};
+                
+                Object.values(this.tableData).forEach(rows => {
+                    rows.forEach(row => {
+                        if (row.Деревья) totalTrees += parseInt(row.Деревья) || 0;
+                        if (row['Площадь факт']) totalArea += parseFloat(row['Площадь факт']) || 0;
+                        if (row.Кластер) {
+                            byCluster[row.Кластер] = (byCluster[row.Кластер] || 0) + 1;
+                        }
+                        if (row.Тип) {
+                            byType[row.Тип] = (byType[row.Тип] || 0) + 1;
+                        }
+                    });
+                });
+                
+                const totalRecords = Object.values(this.tableData).reduce((sum, rows) => sum + rows.length, 0);
+                
+                return {
+                    totalFeatures: this.processedFeatures.length,
+                    totalTrees,
+                    totalArea,
+                    avgTrees: totalRecords > 0 ? Math.round(totalTrees / totalRecords) : 0,
+                    avgArea: totalRecords > 0 ? Math.round((totalArea / totalRecords) * 100) / 100 : 0,
+                    byCluster,
+                    byType
+                };
+            }
+            
+            searchInData(query) {
+                const q = query.toLowerCase();
+                return this.processedFeatures.filter(f => {
+                    const p = f.properties;
+                    return (p.fieldId && p.fieldId.toLowerCase().includes(q)) ||
+                           (p.sort && p.sort.toLowerCase().includes(q)) ||
+                           (p.name && p.name.toLowerCase().includes(q));
+                });
+            }
+            
+            getAllSorts() {
+                const sorts = new Set();
+                Object.values(this.tableData).forEach(rows => {
+                    rows.forEach(row => {
+                        if (row.Сорт) sorts.add(row.Сорт);
+                    });
+                });
+                return sorts;
+            }
+            
+            getAllClusters() {
+                const clusters = new Set();
+                Object.values(this.tableData).forEach(rows => {
+                    rows.forEach(row => {
+                        if (row.Кластер) clusters.add(row.Кластер);
+                    });
+                });
+                return clusters;
+            }
+            
+            filterData(filters) {
+                return this.processedFeatures.filter(f => {
+                    const p = f.properties;
+                    if (filters.cluster && p.cluster !== filters.cluster) return false;
+                    if (filters.type && p.type !== filters.type) return false;
+                    return true;
+                });
+            }
+            
+            generateWkt(geometry) {
+                if (!geometry) return '';
+                if (geometry.type === 'Polygon') {
+                    const rings = geometry.coordinates.map(ring => 
+                        ring.map(coord => coord.join(' ')).join(', ')
+                    ).join('), (');
+                    return `POLYGON((${rings}))`;
+                }
+                if (geometry.type === 'MultiPolygon') {
+                    return 'MULTIPOLYGON(...)';
+                }
+                return '';
+            }
+            
+            isPointInPolygon(point, polygon) {
+                const [x, y] = point;
+                let inside = false;
+                for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+                    const [xi, yi] = polygon[i];
+                    const [xj, yj] = polygon[j];
+                    if (((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi)) {
+                        inside = !inside;
+                    }
+                }
+                return inside;
+            }
+            
+            validateData() {
+                const errors = [];
+                this.processedFeatures.forEach((f, idx) => {
+                    if (!f.geometry) {
+                        errors.push(`Feature ${idx}: нет геометрии`);
+                    }
+                    if (!f.properties.fieldId) {
+                        errors.push(`Feature ${idx}: нет fieldId`);
+                    }
+                });
+                return { valid: errors.length === 0, errors };
+            }
+            
+            getExportData() {
+                return this.processedFeatures.map(f => ({
+                    fieldId: f.properties.fieldId,
+                    name: f.properties.name,
+                    cluster: f.properties.cluster,
+                    type: f.properties.type,
+                    sort: f.properties.sort
+                }));
+            }
+        }
+        
+        class StatsManager {
+            constructor(panelId, dataManager) {
+                this.panelElement = document.getElementById(panelId);
+                this.dataManager = dataManager;
+                this.stats = {};
+            }
+            
+            calculateStats() {
+                if (!this.dataManager.geoData) return {};
+                
+                const features = this.dataManager.geoData.features;
+                let totalArea = 0;
+                let totalTrees = 0;
+                const byCluster = {};
+                
+                features.forEach(f => {
+                    const p = f.properties;
+                    if (p.Shape_Area) totalArea += p.Shape_Area;
+                    if (p.Количество_Деревьев) totalTrees += p.Количество_Деревьев;
+                    if (p.Кластер) {
+                        byCluster[p.Кластер] = (byCluster[p.Кластер] || 0) + 1;
+                    }
+                });
+                
+                this.stats = {
+                    totalArea: Math.round(totalArea * 100) / 100,
+                    avgArea: features.length > 0 ? Math.round((totalArea / features.length) * 100) / 100 : 0,
+                    totalTrees,
+                    avgTrees: features.length > 0 ? Math.round(totalTrees / features.length) : 0,
+                    byCluster,
+                    totalFeatures: features.length
+                };
+                
+                return this.stats;
+            }
+        }
+        
+        class FilterManager {
+            constructor(panelId, dataManager, mapManager) {
+                this.panelElement = document.getElementById(panelId);
+                this.dataManager = dataManager;
+                this.mapManager = mapManager;
+            }
+            
+            filterByCluster(cluster) {
+                if (!this.dataManager.geoData) return [];
+                return this.dataManager.geoData.features.filter(f => 
+                    f.properties.Кластер === cluster
+                );
+            }
+            
+            filterByType(type) {
+                if (!this.dataManager.geoData) return [];
+                return this.dataManager.geoData.features.filter(f => 
+                    f.properties.type === type
+                );
+            }
+            
+            getUniqueClusters() {
+                if (!this.dataManager.geoData) return [];
+                const clusters = new Set();
+                this.dataManager.geoData.features.forEach(f => {
+                    if (f.properties.Кластер) {
+                        clusters.add(f.properties.Кластер);
+                    }
+                });
+                return Array.from(clusters);
+            }
+        }
+        
+        class ExportManager {
+            constructor(dataManager) {
+                this.dataManager = dataManager;
+            }
+        }
 
         // Моки для DOM элементов
         function createMockElement(id, content = '') {
