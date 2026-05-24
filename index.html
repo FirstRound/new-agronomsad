@@ -2,657 +2,874 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Гео-сервис: Собрано в саду v2.0</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Геосервис Собрано в саду</title>
     
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link rel="stylesheet" href="https://unpkg.com/leaflet-minimap@3.6.1/dist/Control.MiniMap.min.css" />
-    <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#0d1a12">
-    <meta name="description" content="Интерактивная карта агрономических данных">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-minimap@3.6.1/dist/Control.MiniMap.css" />
     
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
     <style>
         :root {
-            --bg-primary: #1a1a1a;
-            --bg-secondary: #0d1a12;
-            --bg-panel: #2c2c2c;
-            --text-primary: #ffffff;
-            --text-secondary: #bce139;
-            --accent: #e63a46;
-            --border: #333;
-            --success: #4caf50;
-            --warning: #ff9800;
-            --info: #2196f3;
-            --shadow: rgba(0,0,0,0.5);
-        }
-
-        [data-theme="light"] {
-            --bg-primary: #f5f5f5;
-            --bg-secondary: #ffffff;
-            --bg-panel: #e0e0e0;
-            --text-primary: #1a1a1a;
-            --text-secondary: #0d1a12;
-            --border: #ccc;
-            --shadow: rgba(0,0,0,0.2);
+            --primary: #10b981;
+            --primary-dark: #059669;
+            --secondary: #3b82f6;
+            --accent: #f59e0b;
+            --danger: #ef4444;
+            --bg-light: #f8fafc;
+            --bg-dark: #0f172a;
+            --card-light: rgba(255, 255, 255, 0.85);
+            --card-dark: rgba(30, 41, 59, 0.85);
+            --text-light: #1e293b;
+            --text-dark: #f1f5f9;
+            --border-light: rgba(255, 255, 255, 0.3);
+            --border-dark: rgba(255, 255, 255, 0.1);
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            --radius: 12px;
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        html, body { height: 100%; font-family: 'Inter', sans-serif; background-color: var(--bg-primary); overflow: hidden; touch-action: manipulation; transition: background-color 0.3s; }
         
-        #app { display: flex; flex-direction: column; height: 100%; }
-        
-        /* HEADER */
-        .header { 
-            background-color: var(--bg-secondary); 
-            color: var(--text-primary); 
-            padding: 14px 30px; 
-            display: flex; 
-            align-items: center; 
-            justify-content: space-between; 
-            border-bottom: 2px solid var(--text-secondary); 
-            z-index: 1000; 
-            box-shadow: 0 4px 20px var(--shadow); 
-            gap: 20px; 
-            flex-wrap: wrap;
-        }
-        
-        .header-title { display: flex; align-items: center; white-space: nowrap; }
-        .header-title::before { 
-            content: ''; 
-            display: inline-block; 
-            width: 20px; 
-            height: 20px; 
-            margin-right: 15px; 
-            background-color: var(--accent); 
-            border-radius: 50% 50% 50% 5px; 
-            transform: rotate(-45deg); 
-            flex-shrink: 0; 
-        }
-        .header h1 { font-size: 1.4rem; font-weight: 700; letter-spacing: -0.02em; margin: 0; }
-        
-        .version-badge {
-            background: var(--text-secondary);
-            color: var(--bg-secondary);
-            padding: 4px 10px;
-            border-radius: 12px;
-            font-size: 0.75rem;
-            font-weight: 600;
-            margin-left: 10px;
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-light);
+            color: var(--text-light);
+            transition: var(--transition);
+            overflow: hidden;
+            height: 100vh;
         }
 
-        /* SEARCH */
-        .search-container {
+        body.dark-mode {
+            background: var(--bg-dark);
+            color: var(--text-dark);
+        }
+
+        /* Glassmorphism Classes */
+        .glass {
+            background: var(--card-light);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--border-light);
+            box-shadow: var(--shadow-lg);
+        }
+
+        body.dark-mode .glass {
+            background: var(--card-dark);
+            border: 1px solid var(--border-dark);
+        }
+
+        /* Layout */
+        #app { display: flex; flex-direction: column; height: 100vh; }
+        
+        header {
+            height: 64px;
             display: flex;
             align-items: center;
-            background-color: var(--bg-primary);
-            border-radius: 8px;
-            padding: 4px 6px;
-            border: 1px solid var(--border);
-            flex-grow: 1;
-            max-width: 450px;
-            transition: border-color 0.2s;
+            justify-content: space-between;
+            padding: 0 24px;
+            z-index: 1000;
         }
-        .search-container:focus-within { border-color: var(--text-secondary); }
-        .search-container input {
-            background: transparent;
-            border: none;
-            color: var(--text-primary);
-            padding: 8px 12px;
-            font-family: 'Inter', sans-serif;
-            font-size: 14px;
-            flex-grow: 1;
-            outline: none;
-            width: 100%;
-        }
-        .search-container input::placeholder { color: #888; }
-        .search-btn {
-            background-color: var(--bg-panel);
-            color: var(--text-secondary);
-            border: none;
-            padding: 8px 12px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 16px;
-            transition: all 0.2s;
-        }
-        .search-btn:hover { background-color: var(--text-secondary); color: var(--bg-secondary); }
 
-        /* HEADER ACTIONS */
+        .logo {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
         .header-actions {
             display: flex;
-            gap: 10px;
-            align-items: center;
-            flex-wrap: wrap;
+            gap: 12px;
         }
 
         .btn {
-            background-color: var(--bg-panel);
-            color: var(--text-primary);
-            border: 1px solid var(--border);
             padding: 8px 16px;
-            border-radius: 6px;
+            border-radius: 8px;
+            border: none;
             cursor: pointer;
-            font-size: 13px;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            transition: all 0.2s;
-        }
-        .btn:hover { 
-            background-color: var(--text-secondary); 
-            color: var(--bg-secondary);
-            transform: translateY(-1px);
-        }
-        .btn-primary {
-            background-color: var(--text-secondary);
-            color: var(--bg-secondary);
-        }
-        .btn-primary:hover {
-            background-color: var(--accent);
-            color: white;
-        }
-
-        /* MAIN CONTENT */
-        .main-content {
-            display: flex;
-            flex: 1;
-            overflow: hidden;
-        }
-
-        /* SIDEBAR */
-        .sidebar {
-            width: 350px;
-            background-color: var(--bg-secondary);
-            border-right: 1px solid var(--border);
-            display: flex;
-            flex-direction: column;
-            overflow-y: auto;
-            transition: transform 0.3s ease;
-        }
-        .sidebar.collapsed {
-            transform: translateX(-100%);
-            position: absolute;
-            z-index: 999;
-        }
-
-        .sidebar-section {
-            padding: 20px;
-            border-bottom: 1px solid var(--border);
-        }
-        .sidebar-section h3 {
-            color: var(--text-secondary);
-            font-size: 0.9rem;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            margin-bottom: 15px;
+            font-weight: 500;
             display: flex;
             align-items: center;
             gap: 8px;
+            transition: var(--transition);
+            font-size: 0.875rem;
         }
 
-        /* STATS DASHBOARD */
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover { background: var(--primary-dark); transform: translateY(-1px); }
+
+        .btn-outline {
+            background: transparent;
+            border: 1px solid currentColor;
+            color: inherit;
+        }
+
+        .btn-outline:hover {
+            background: rgba(16, 185, 129, 0.1);
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        .main-container {
+            display: flex;
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 320px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            overflow-y: auto;
+            z-index: 900;
+            transition: var(--transition);
+        }
+
+        .sidebar.hidden {
+            margin-left: -320px;
+        }
+
+        .panel {
+            border-radius: var(--radius);
+            padding: 20px;
+        }
+
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(2, 1fr);
+            grid-template-columns: 1fr 1fr;
             gap: 12px;
         }
+
         .stat-card {
-            background: var(--bg-panel);
-            padding: 15px;
+            background: rgba(16, 185, 129, 0.1);
+            padding: 12px;
             border-radius: 8px;
             text-align: center;
         }
-        .stat-value {
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: var(--text-secondary);
-        }
-        .stat-label {
-            font-size: 0.75rem;
-            color: #888;
-            margin-top: 5px;
-            text-transform: uppercase;
-        }
 
-        /* FILTERS */
-        .filter-group {
-            margin-bottom: 15px;
-        }
-        .filter-group label {
-            display: block;
-            color: var(--text-primary);
-            font-size: 0.85rem;
-            margin-bottom: 8px;
-        }
-        .filter-select, .filter-input {
+        .stat-value { font-size: 1.5rem; font-weight: 700; color: var(--primary); }
+        .stat-label { font-size: 0.75rem; opacity: 0.8; margin-top: 4px; }
+
+        .filter-group { margin-bottom: 16px; }
+        .filter-label { display: block; margin-bottom: 8px; font-weight: 500; font-size: 0.875rem; }
+        
+        select, input {
             width: 100%;
             padding: 10px;
-            background: var(--bg-primary);
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            color: var(--text-primary);
-            font-size: 14px;
-        }
-        .filter-select:focus, .filter-input:focus {
-            outline: none;
-            border-color: var(--text-secondary);
+            border-radius: 8px;
+            border: 1px solid rgba(128, 128, 128, 0.3);
+            background: rgba(255, 255, 255, 0.5);
+            color: inherit;
+            font-family: inherit;
         }
 
-        /* LAYERS */
-        .layer-toggle {
+        body.dark-mode select, body.dark-mode input {
+            background: rgba(0, 0, 0, 0.2);
+            border-color: rgba(255, 255, 255, 0.1);
+        }
+
+        /* Map */
+        #map { flex: 1; height: 100%; z-index: 1; }
+
+        /* Floating Controls */
+        .floating-controls {
+            position: absolute;
+            bottom: 24px;
+            right: 24px;
             display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 10px 0;
-            border-bottom: 1px solid var(--border);
+            flex-direction: column;
+            gap: 12px;
+            z-index: 900;
         }
-        .layer-toggle:last-child { border-bottom: none; }
-        .toggle-switch {
-            position: relative;
-            width: 50px;
-            height: 26px;
-        }
-        .toggle-switch input { opacity: 0; width: 0; height: 0; }
-        .toggle-slider {
-            position: absolute;
-            cursor: pointer;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background-color: var(--bg-panel);
-            border-radius: 26px;
-            transition: 0.3s;
-        }
-        .toggle-slider:before {
-            position: absolute;
-            content: "";
-            height: 20px;
-            width: 20px;
-            left: 3px;
-            bottom: 3px;
-            background-color: white;
+
+        .fab {
+            width: 48px;
+            height: 48px;
             border-radius: 50%;
-            transition: 0.3s;
-        }
-        input:checked + .toggle-slider { background-color: var(--text-secondary); }
-        input:checked + .toggle-slider:before { transform: translateX(24px); }
-
-        /* LEGEND */
-        .legend-item {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 8px 0;
-        }
-        .legend-color {
-            width: 20px;
-            height: 20px;
-            border-radius: 4px;
-            border: 2px solid rgba(255,255,255,0.3);
-        }
-        .legend-label {
-            color: var(--text-primary);
-            font-size: 0.85rem;
-        }
-
-        /* MAP */
-        #map {
-            flex: 1;
-            background-color: var(--bg-primary);
-        }
-
-        /* TOOLTIP */
-        .smart-tooltip {
-            background: var(--bg-secondary);
-            border: 2px solid var(--text-secondary);
-            border-radius: 8px;
-            padding: 15px;
-            min-width: 200px;
-            box-shadow: 0 4px 20px var(--shadow);
-        }
-        .tooltip-title {
-            color: var(--text-secondary);
-            font-weight: 700;
-            margin-bottom: 10px;
-            font-size: 1rem;
-        }
-        .tooltip-row {
-            display: flex;
-            justify-content: space-between;
-            padding: 5px 0;
-            border-bottom: 1px solid var(--border);
-            font-size: 0.85rem;
-        }
-        .tooltip-row:last-child { border-bottom: none; }
-        .tooltip-label { color: #888; }
-        .tooltip-value { color: var(--text-primary); font-weight: 600; }
-
-        /* MEASUREMENT PANEL */
-        .measurement-panel {
-            position: absolute;
-            top: 80px;
-            right: 20px;
-            background: var(--bg-secondary);
-            border: 2px solid var(--text-secondary);
-            border-radius: 8px;
-            padding: 15px;
-            z-index: 1000;
-            display: none;
-            min-width: 200px;
-        }
-        .measurement-panel.active { display: block; }
-        .measurement-result {
-            margin-top: 10px;
-            padding-top: 10px;
-            border-top: 1px solid var(--border);
-        }
-        .measurement-value {
-            font-size: 1.2rem;
-            font-weight: 700;
-            color: var(--text-secondary);
-        }
-
-        /* WEATHER WIDGET */
-        .weather-widget {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-radius: 8px;
-            padding: 15px;
+            border: none;
+            background: var(--primary);
             color: white;
-            margin-bottom: 15px;
-        }
-        .weather-temp {
-            font-size: 2rem;
-            font-weight: 700;
-        }
-        .weather-desc {
-            font-size: 0.85rem;
-            opacity: 0.9;
-        }
-
-        /* PRINT STYLES */
-        @media print {
-            .header, .sidebar, .measurement-panel, .leaflet-control-container {
-                display: none !important;
-            }
-            #map { 
-                position: absolute;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-            }
-        }
-
-        /* RESPONSIVE */
-        @media (max-width: 768px) {
-            .header { padding: 10px 15px; }
-            .header h1 { font-size: 1rem; }
-            .sidebar { 
-                width: 100%;
-                position: absolute;
-                z-index: 999;
-                transform: translateX(-100%);
-            }
-            .sidebar.active { transform: translateX(0); }
-            .stats-grid { grid-template-columns: 1fr; }
-        }
-
-        /* ANIMATIONS */
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.6; }
-        }
-        .loading { animation: pulse 1.5s infinite; }
-
-        /* QR CODE MODAL */
-        .modal-overlay {
-            position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0,0,0,0.7);
-            display: none;
+            cursor: pointer;
+            display: flex;
             align-items: center;
             justify-content: center;
-            z-index: 2000;
-        }
-        .modal-overlay.active { display: flex; }
-        .modal-content {
-            background: var(--bg-secondary);
-            border: 2px solid var(--text-secondary);
-            border-radius: 12px;
-            padding: 30px;
-            text-align: center;
-            max-width: 400px;
-        }
-        .modal-close {
-            margin-top: 20px;
-        }
-        #qr-code {
-            margin: 20px auto;
+            box-shadow: var(--shadow-lg);
+            transition: var(--transition);
         }
 
-        /* NOTIFICATIONS */
-        .notification {
+        .fab:hover { transform: scale(1.1); background: var(--primary-dark); }
+
+        /* Version Badge */
+        .version-badge {
             position: fixed;
-            top: 20px;
-            right: 20px;
-            background: var(--bg-secondary);
-            border-left: 4px solid var(--success);
-            border-radius: 8px;
-            padding: 15px 20px;
-            box-shadow: 0 4px 20px var(--shadow);
-            z-index: 3000;
-            transform: translateX(400px);
-            transition: transform 0.3s ease;
+            bottom: 10px;
+            left: 10px;
+            font-size: 0.7rem;
+            opacity: 0.5;
+            z-index: 1000;
+            pointer-events: none;
         }
-        .notification.show { transform: translateX(0); }
-        .notification.error { border-left-color: var(--accent); }
-        .notification.warning { border-left-color: var(--warning); }
-        .notification.info { border-left-color: var(--info); }
+
+        /* Weather Widget */
+        .weather-widget {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            color: white;
+            border-radius: var(--radius);
+            margin-bottom: 16px;
+        }
+
+        /* Toast Notifications */
+        .toast-container {
+            position: fixed;
+            top: 80px;
+            right: 24px;
+            z-index: 2000;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .toast {
+            padding: 12px 20px;
+            border-radius: 8px;
+            background: var(--card-light);
+            border-left: 4px solid var(--primary);
+            box-shadow: var(--shadow-lg);
+            animation: slideIn 0.3s ease;
+            min-width: 250px;
+        }
+
+        body.dark-mode .toast { background: var(--card-dark); }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .sidebar {
+                position: absolute;
+                left: 0;
+                top: 0;
+                bottom: 0;
+                background: var(--bg-light);
+                transform: translateX(-100%);
+            }
+            body.dark-mode .sidebar { background: var(--bg-dark); }
+            .sidebar.active { transform: translateX(0); }
+            .header-actions span { display: none; }
+        }
+
+        /* Print Styles */
+        @media print {
+            .sidebar, header, .floating-controls, .version-badge { display: none !important; }
+            #map { height: 100vh; }
+        }
     </style>
 </head>
 <body>
-    <div id="app">
-        <!-- HEADER -->
-        <header class="header">
-            <div class="header-title">
-                <h1>Собрано в саду</h1>
-                <span class="version-badge">v2.0.0</span>
-            </div>
-            
-            <div class="search-container">
-                <input type="text" id="search-input" placeholder="Поиск по номеру участка или сорту..." autocomplete="off">
-                <button class="search-btn" id="clear-btn" title="Очистить поиск">✕</button>
-            </div>
-            
-            <div class="header-actions">
-                <button class="btn" id="toggle-sidebar-btn" title="Панель">☰</button>
-                <button class="btn" id="theme-toggle" title="Тема">🌓</button>
-                <button class="btn" id="measure-btn" title="Измерить">📏</button>
-                <button class="btn" id="export-btn" title="Экспорт">📊</button>
-                <button class="btn btn-primary" id="print-btn" title="Печать">🖨️</button>
-            </div>
-        </header>
 
-        <!-- MAIN CONTENT -->
-        <div class="main-content">
-            <!-- SIDEBAR -->
-            <aside class="sidebar" id="sidebar">
-                <!-- STATS -->
-                <div class="sidebar-section">
-                    <h3>📈 Статистика</h3>
-                    <div class="stats-grid" id="stats-dashboard">
-                        <div class="stat-card">
-                            <div class="stat-value" id="stat-total-area">0</div>
-                            <div class="stat-label">Га总面积</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-value" id="stat-total-trees">0</div>
-                            <div class="stat-label">Деревьев</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-value" id="stat-clusters">0</div>
-                            <div class="stat-label">Кластеров</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-value" id="stat-varieties">0</div>
-                            <div class="stat-label">Сортов</div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- WEATHER -->
-                <div class="sidebar-section">
-                    <h3>🌤️ Погода</h3>
-                    <div class="weather-widget" id="weather-widget">
-                        <div class="weather-temp" id="weather-temp">--°C</div>
-                        <div class="weather-desc" id="weather-desc">Загрузка...</div>
-                    </div>
-                </div>
-
-                <!-- FILTERS -->
-                <div class="sidebar-section">
-                    <h3>🔍 Фильтры</h3>
-                    <div class="filter-group">
-                        <label for="cluster-filter">Кластер</label>
-                        <select class="filter-select" id="cluster-filter">
-                            <option value="">Все кластеры</option>
-                        </select>
-                    </div>
-                    <div class="filter-group">
-                        <label for="variety-filter">Сорт</label>
-                        <select class="filter-select" id="variety-filter">
-                            <option value="">Все сорта</option>
-                        </select>
-                    </div>
-                    <div class="filter-group">
-                        <label for="age-filter">Возраст (лет)</label>
-                        <input type="range" class="filter-input" id="age-filter" min="0" max="50" value="50">
-                        <div style="text-align: right; color: #888; font-size: 0.85rem;">
-                            До <span id="age-value">50</span> лет
-                        </div>
-                    </div>
-                    <button class="btn" id="reset-filters-btn" style="width: 100%;">Сбросить фильтры</button>
-                </div>
-
-                <!-- LAYERS -->
-                <div class="sidebar-section">
-                    <h3>🗺️ Слои карты</h3>
-                    <div class="layer-toggle">
-                        <span style="color: var(--text-primary);">Границы участков</span>
-                        <label class="toggle-switch">
-                            <input type="checkbox" id="layer-parcels" checked>
-                            <span class="toggle-slider"></span>
-                        </label>
-                    </div>
-                    <div class="layer-toggle">
-                        <span style="color: var(--text-primary);">Номера участков</span>
-                        <label class="toggle-switch">
-                            <input type="checkbox" id="layer-labels" checked>
-                            <span class="toggle-slider"></span>
-                        </label>
-                    </div>
-                    <div class="layer-toggle">
-                        <span style="color: var(--text-primary);">Деревья</span>
-                        <label class="toggle-switch">
-                            <input type="checkbox" id="layer-trees">
-                            <span class="toggle-slider"></span>
-                        </label>
-                    </div>
-                </div>
-
-                <!-- LEGEND -->
-                <div class="sidebar-section">
-                    <h3>🎨 Легенда</h3>
-                    <div id="legend-container">
-                        <div class="legend-item">
-                            <div class="legend-color" style="background: #e63a46;"></div>
-                            <span class="legend-label">Яблоня</span>
-                        </div>
-                        <div class="legend-item">
-                            <div class="legend-color" style="background: #4caf50;"></div>
-                            <span class="legend-label">Груша</span>
-                        </div>
-                        <div class="legend-item">
-                            <div class="legend-color" style="background: #ff9800;"></div>
-                            <span class="legend-label">Вишня</span>
-                        </div>
-                        <div class="legend-item">
-                            <div class="legend-color" style="background: #2196f3;"></div>
-                            <span class="legend-label">Слива</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- IMPORT/EXPORT -->
-                <div class="sidebar-section">
-                    <h3>💾 Данные</h3>
-                    <button class="btn" id="import-btn" style="width: 100%; margin-bottom: 10px;">📥 Импорт GeoJSON</button>
-                    <input type="file" id="import-file" accept=".json,.geojson" style="display: none;">
-                    <button class="btn" id="export-csv-btn" style="width: 100%;">📤 Экспорт CSV</button>
-                </div>
-            </aside>
-
-            <!-- MAP -->
-            <div id="map"></div>
+<div id="app">
+    <header class="glass">
+        <div class="logo">
+            <i class="fas fa-leaf"></i>
+            <span>Геосервис Собрано в саду</span>
         </div>
-
-        <!-- MEASUREMENT PANEL -->
-        <div class="measurement-panel" id="measurement-panel">
-            <h4 style="color: var(--text-secondary); margin-bottom: 10px;">📏 Измерение</h4>
-            <p style="color: var(--text-primary); font-size: 0.85rem;">Кликните на карту для добавления точек</p>
-            <div class="measurement-result">
-                <div style="color: #888; font-size: 0.85rem;">Расстояние:</div>
-                <div class="measurement-value" id="measure-distance">0 м</div>
-            </div>
-            <div class="measurement-result">
-                <div style="color: #888; font-size: 0.85rem;">Площадь:</div>
-                <div class="measurement-value" id="measure-area">0 м²</div>
-            </div>
-            <button class="btn" id="clear-measure-btn" style="width: 100%; margin-top: 10px;">Очистить</button>
-            <button class="btn" id="close-measure-btn" style="width: 100%; margin-top: 5px;">Закрыть</button>
+        <div class="header-actions">
+            <button class="btn btn-outline" onclick="app.toggleTheme()" title="Тема">
+                <i class="fas fa-moon"></i>
+            </button>
+            <button class="btn btn-outline" onclick="app.toggleMeasurement()" title="Измерить">
+                <i class="fas fa-ruler-combined"></i>
+            </button>
+            <button class="btn btn-primary" onclick="app.exportData()">
+                <i class="fas fa-file-export"></i>
+                <span>Экспорт</span>
+            </button>
+            <label class="btn btn-outline" style="cursor: pointer;">
+                <i class="fas fa-file-import"></i>
+                <span>Импорт</span>
+                <input type="file" id="importFile" accept=".json,.geojson" style="display: none;" onchange="app.importData(this)">
+            </label>
         </div>
+    </header>
 
-        <!-- QR MODAL -->
-        <div class="modal-overlay" id="qr-modal">
-            <div class="modal-content">
-                <h3 style="color: var(--text-secondary);">QR-код участка</h3>
-                <div id="qr-code"></div>
-                <p style="color: var(--text-primary); font-size: 0.85rem;" id="qr-info"></p>
-                <button class="btn modal-close" id="close-qr-btn">Закрыть</button>
+    <div class="main-container">
+        <aside class="sidebar glass" id="sidebar">
+            <div class="panel">
+                <h3><i class="fas fa-chart-pie"></i> Статистика</h3>
+                <div class="stats-grid" style="margin-top: 15px;">
+                    <div class="stat-card">
+                        <div class="stat-value" id="totalArea">0</div>
+                        <div class="stat-label">Га</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="totalTrees">0</div>
+                        <div class="stat-label">Деревьев</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="totalClusters">0</div>
+                        <div class="stat-label">Кластеров</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="avgAge">0</div>
+                        <div class="stat-label">Ср. возраст</div>
+                    </div>
+                </div>
             </div>
-        </div>
 
-        <!-- NOTIFICATION -->
-        <div class="notification" id="notification">
-            <span id="notification-text"></span>
+            <div class="panel">
+                <h3><i class="fas fa-cloud-sun"></i> Погода</h3>
+                <div class="weather-widget" id="weatherWidget">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <span>Загрузка...</span>
+                </div>
+            </div>
+
+            <div class="panel">
+                <h3><i class="fas fa-filter"></i> Фильтры</h3>
+                <div class="filter-group">
+                    <label class="filter-label">Кластер</label>
+                    <select id="clusterFilter" onchange="app.applyFilters()">
+                        <option value="all">Все</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label class="filter-label">Культура</label>
+                    <select id="cropFilter" onchange="app.applyFilters()">
+                        <option value="all">Все</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label class="filter-label">Поиск</label>
+                    <input type="text" id="searchInput" placeholder="№ участка или сорт..." oninput="app.search()">
+                </div>
+            </div>
+
+            <div class="panel">
+                <h3><i class="fas fa-info-circle"></i> Легенда</h3>
+                <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 10px;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <div style="width: 16px; height: 16px; background: #ef4444; border-radius: 4px;"></div>
+                        <span>Яблоня</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <div style="width: 16px; height: 16px; background: #f59e0b; border-radius: 4px;"></div>
+                        <span>Груша</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <div style="width: 16px; height: 16px; background: #10b981; border-radius: 4px;"></div>
+                        <span>Вишня</span>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <div id="map"></div>
+
+        <div class="floating-controls">
+            <button class="fab" onclick="app.toggleSidebar()" title="Меню">
+                <i class="fas fa-bars"></i>
+            </button>
+            <button class="fab" onclick="window.print()" title="Печать">
+                <i class="fas fa-print"></i>
+            </button>
+            <button class="fab" onclick="app.resetView()" title="Центрировать">
+                <i class="fas fa-compress-arrows-alt"></i>
+            </button>
         </div>
     </div>
+</div>
 
-    <!-- SCRIPTS -->
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://unpkg.com/leaflet-minimap@3.6.1/dist/Control.MiniMap.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+<div class="version-badge">v2.1.0 Local</div>
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- Scripts -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet-minimap@3.6.1/dist/Control.MiniMap.min.js"></script>
+
+<script>
+/**
+ * Глобальное приложение
+ * Объединяет всю логику в одном пространстве имен для работы без сборщиков
+ */
+const app = {
+    map: null,
+    layers: {},
+    data: {
+        geojson: null,
+        csv: null,
+        clusters: [],
+        crops: []
+    },
+    state: {
+        darkMode: false,
+        measuring: false,
+        measurementLayer: null,
+        points: []
+    },
     
-    <script type="module" src="src/js/dataManager.js"></script>
-    <script type="module" src="src/js/mapManager.js"></script>
-    <script type="module" src="src/js/searchManager.js"></script>
-    <script type="module" src="src/js/exportManager.js"></script>
-    <script type="module" src="src/js/tooltipManager.js"></script>
-    <script type="module" src="src/js/filterManager.js"></script>
-    <script type="module" src="src/js/statsManager.js"></script>
-    <script type="module" src="src/js/measurementManager.js"></script>
-    <script type="module" src="src/js/weatherManager.js"></script>
-    <script type="module" src="src/js/layerManager.js"></script>
-    <script type="module" src="src/js/qrManager.js"></script>
-    <script type="module" src="src/js/notificationManager.js"></script>
-    <script type="module" src="src/js/cacheManager.js"></script>
-    <script type="module" src="src/js/app.js"></script>
-    
-    <script>
-        window.addEventListener('DOMContentLoaded', async () => {
-            const { app } = await import('./src/js/app.js');
-            await app.init();
+    // Инициализация
+    init() {
+        this.loadTheme();
+        this.initMap();
+        this.loadData();
+        this.setupEventListeners();
+        this.loadWeather();
+        console.log('App initialized v2.1.0');
+    },
+
+    // Карта
+    initMap() {
+        const center = [45.0355, 38.9590]; // Краснодарский край (пример)
+        this.map = L.map('map', {
+            zoomControl: false,
+            attributionControl: false
+        }).setView(center, 13);
+
+        L.control.zoom({ position: 'bottomright' }).addTo(this.map);
+        L.control.scale().addTo(this.map);
+
+        // Базовые слои
+        const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19
         });
-    </script>
+        
+        const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            maxZoom: 19
+        });
+
+        osm.addTo(this.map);
+        this.layers.base = { "OSM": osm, "Спутник": satellite };
+        L.control.layers(this.layers.base).addTo(this.map);
+
+        // Мини-карта
+        new L.Control.MiniMap(satellite, { toggleDisplay: true, minimizedWidth: 100 }).addTo(this.map);
+    },
+
+    // Загрузка данных (встроены в HTML)
+    loadData() {
+        try {
+            // Парсинг встроенного GeoJSON
+            const geojsonRaw = document.getElementById('embeddedGeoJSON').textContent;
+            this.data.geojson = JSON.parse(geojsonRaw);
+            
+            // Парсинг CSV
+            const csvRaw = document.getElementById('embeddedCSV').textContent;
+            this.data.csv = this.parseCSV(csvRaw);
+            
+            this.processData();
+            this.renderMap();
+            this.updateStats();
+            this.populateFilters();
+        } catch (e) {
+            console.error('Error loading data:', e);
+            this.showToast('Ошибка загрузки данных', 'error');
+        }
+    },
+
+    parseCSV(text) {
+        const lines = text.trim().split('\n');
+        const headers = lines[0].split(',');
+        return lines.slice(1).map(line => {
+            const values = line.split(',');
+            const obj = {};
+            headers.forEach((h, i) => obj[h.trim()] = values[i]?.trim());
+            return obj;
+        });
+    },
+
+    processData() {
+        // Извлечение уникальных значений для фильтров
+        const clusters = new Set();
+        const crops = new Set();
+        
+        this.data.csv.forEach(row => {
+            if(row.Cluster) clusters.add(row.Cluster);
+            if(row.Crop) crops.add(row.Crop);
+        });
+
+        this.data.clusters = Array.from(clusters);
+        this.data.crops = Array.from(crops);
+    },
+
+    renderMap() {
+        if (this.layers.features) this.map.removeLayer(this.layers.features);
+
+        const style = (feature) => ({
+            color: this.getColor(feature.properties.Crop),
+            weight: 2,
+            opacity: 0.8,
+            fillOpacity: 0.4
+        });
+
+        const onEachFeature = (feature, layer) => {
+            const props = feature.properties;
+            const info = this.data.csv.find(r => r.PlotID == props.PlotID) || {};
+            
+            let popupContent = `
+                <div style="min-width: 200px">
+                    <h3 style="margin-bottom: 8px; color: var(--primary)">Участок ${props.PlotID}</h3>
+                    <p><strong>Культура:</strong> ${info.Crop || props.Crop || 'Н/Д'}</p>
+                    <p><strong>Сорт:</strong> ${info.Variety || 'Н/Д'}</p>
+                    <p><strong>Площадь:</strong> ${(props.area_ha || 0).toFixed(2)} га</p>
+                    <p><strong>Деревьев:</strong> ${info.Trees || 0}</p>
+                    <p><strong>Возраст:</strong> ${info.Age || 0} лет</p>
+                    <button class="btn btn-primary" style="width:100%; margin-top:10px" onclick="app.generateQR('${props.PlotID}')">
+                        <i class="fas fa-qrcode"></i> QR-код
+                    </button>
+                </div>
+            `;
+            
+            layer.bindPopup(popupContent);
+            
+            layer.on({
+                mouseover: (e) => {
+                    e.target.setStyle({ weight: 4, fillOpacity: 0.6 });
+                },
+                mouseout: (e) => {
+                    e.target.setStyle(style(feature));
+                }
+            });
+        };
+
+        this.layers.features = L.geoJSON(this.data.geojson, {
+            style: style,
+            onEachFeature: onEachFeature
+        }).addTo(this.map);
+    },
+
+    getColor(crop) {
+        const colors = {
+            'Яблоня': '#ef4444',
+            'Груша': '#f59e0b',
+            'Вишня': '#10b981',
+            'Черешня': '#8b5cf6',
+            'Абрикос': '#f97316'
+        };
+        return colors[crop] || '#64748b';
+    },
+
+    // Статистика
+    updateStats() {
+        let area = 0;
+        let trees = 0;
+        let ages = [];
+
+        this.data.csv.forEach(row => {
+            area += parseFloat(row.Area_ha) || 0;
+            trees += parseInt(row.Trees) || 0;
+            if(row.Age) ages.push(parseInt(row.Age));
+        });
+
+        const avgAge = ages.length ? Math.round(ages.reduce((a,b)=>a+b,0)/ages.length) : 0;
+
+        this.animateValue('totalArea', area.toFixed(1));
+        this.animateValue('totalTrees', trees);
+        this.animateValue('totalClusters', this.data.clusters.length);
+        this.animateValue('avgAge', avgAge);
+    },
+
+    animateValue(id, end) {
+        const el = document.getElementById(id);
+        el.innerText = end;
+    },
+
+    // Фильтры
+    populateFilters() {
+        const clusterSel = document.getElementById('clusterFilter');
+        const cropSel = document.getElementById('cropFilter');
+
+        this.data.clusters.forEach(c => {
+            const opt = document.createElement('option');
+            opt.value = c; opt.innerText = c;
+            clusterSel.appendChild(opt);
+        });
+
+        this.data.crops.forEach(c => {
+            const opt = document.createElement('option');
+            opt.value = c; opt.innerText = c;
+            cropSel.appendChild(opt);
+        });
+    },
+
+    applyFilters() {
+        const cluster = document.getElementById('clusterFilter').value;
+        const crop = document.getElementById('cropFilter').value;
+        const search = document.getElementById('searchInput').value.toLowerCase();
+
+        this.layers.features.eachLayer(layer => {
+            const props = layer.feature.properties;
+            const info = this.data.csv.find(r => r.PlotID == props.PlotID) || {};
+            
+            let show = true;
+            if (cluster !== 'all' && info.Cluster !== cluster) show = false;
+            if (crop !== 'all' && info.Crop !== crop) show = false;
+            if (search && !props.PlotID.toLowerCase().includes(search) && !(info.Variety||'').toLowerCase().includes(search)) show = false;
+
+            if (show) {
+                if (!this.map.hasLayer(layer)) this.map.addLayer(layer);
+            } else {
+                if (this.map.hasLayer(layer)) this.map.removeLayer(layer);
+            }
+        });
+    },
+
+    search() {
+        this.applyFilters();
+    },
+
+    // Утилиты
+    toggleTheme() {
+        this.state.darkMode = !this.state.darkMode;
+        document.body.classList.toggle('dark-mode', this.state.darkMode);
+        localStorage.setItem('theme', this.state.darkMode ? 'dark' : 'light');
+    },
+
+    loadTheme() {
+        const saved = localStorage.getItem('theme');
+        if (saved === 'dark') {
+            this.state.darkMode = true;
+            document.body.classList.add('dark-mode');
+        }
+    },
+
+    toggleSidebar() {
+        document.getElementById('sidebar').classList.toggle('hidden');
+        // Для мобильных
+        if(window.innerWidth <= 768) {
+            document.getElementById('sidebar').classList.toggle('active');
+        }
+    },
+
+    resetView() {
+        if (this.layers.features) {
+            this.map.fitBounds(this.layers.features.getBounds(), { padding: [50, 50] });
+        }
+    },
+
+    // Измерения
+    toggleMeasurement() {
+        this.state.measuring = !this.state.measuring;
+        this.state.points = [];
+        if (this.state.measurementLayer) {
+            this.map.removeLayer(this.state.measurementLayer);
+            this.state.measurementLayer = null;
+        }
+        
+        if (this.state.measuring) {
+            this.map.on('click', this.handleMeasureClick, this);
+            this.showToast('Режим измерения: кликайте по карте', 'info');
+            document.body.style.cursor = 'crosshair';
+        } else {
+            this.map.off('click', this.handleMeasureClick, this);
+            document.body.style.cursor = '';
+            this.showToast('Режим измерения выключен', 'info');
+        }
+    },
+
+    handleMeasureClick(e) {
+        this.state.points.push(e.latlng);
+        
+        if (!this.state.measurementLayer) {
+            this.state.measurementLayer = L.polyline(this.state.points, {color: 'red'}).addTo(this.map);
+        } else {
+            this.state.measurementLayer.setLatLngs(this.state.points);
+        }
+
+        if (this.state.points.length > 1) {
+            const dist = this.calculateDistance(this.state.points[this.state.points.length-2], e.latlng);
+            const total = this.state.points.reduce((acc, curr, idx) => {
+                if(idx === 0) return 0;
+                return acc + this.calculateDistance(this.state.points[idx-1], curr);
+            }, 0);
+            
+            L.popup()
+                .setLatLng(e.latlng)
+                .setContent(`Длина сегмента: ${dist.toFixed(1)} м<br>Всего: ${total.toFixed(1)} м`)
+                .openOn(this.map);
+        }
+    },
+
+    calculateDistance(latlng1, latlng2) {
+        return latlng1.distanceTo(latlng2);
+    },
+
+    // Погода (Open-Meteo API)
+    async loadWeather() {
+        const widget = document.getElementById('weatherWidget');
+        try {
+            // Берем центр карты
+            const center = this.map.getCenter();
+            const url = `https://api.open-meteo.com/v1/forecast?latitude=${center.lat}&longitude=${center.lng}&current_weather=true`;
+            
+            const res = await fetch(url);
+            const data = await res.json();
+            
+            const temp = data.current_weather.temperature;
+            const wind = data.current_weather.windspeed;
+            const code = data.current_weather.weathercode;
+            
+            let icon = 'fa-cloud';
+            if(code <= 3) icon = 'fa-sun';
+            else if(code <= 48) icon = 'fa-smog';
+            else if(code <= 67) icon = 'fa-cloud-rain';
+            else if(code <= 77) icon = 'fa-snowflake';
+            else if(code <= 82) icon = 'fa-bolt';
+
+            widget.innerHTML = `
+                <i class="fas ${icon} fa-2x"></i>
+                <div>
+                    <div style="font-weight:bold">${temp}°C</div>
+                    <div style="font-size:0.8rem">Ветер: ${wind} км/ч</div>
+                </div>
+            `;
+        } catch (e) {
+            widget.innerHTML = '<span>Погода недоступна</span>';
+        }
+    },
+
+    // Экспорт/Импорт
+    exportData() {
+        const csvContent = "data:text/csv;charset=utf-8," 
+            + Object.keys(this.data.csv[0]).join(",") + "\n"
+            + this.data.csv.map(e => Object.values(e).join(",")).join("\n");
+            
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", "agro_data.csv");
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        this.showToast('Данные экспортированы', 'success');
+    },
+
+    importData(input) {
+        const file = input.files[0];
+        if(!file) return;
+        
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const json = JSON.parse(e.target.result);
+                if(json.type === "FeatureCollection") {
+                    this.data.geojson = json;
+                    this.renderMap();
+                    this.resetView();
+                    this.showToast('GeoJSON успешно импортирован', 'success');
+                } else {
+                    throw new Error('Неверный формат');
+                }
+            } catch(err) {
+                this.showToast('Ошибка импорта файла', 'error');
+            }
+        };
+        reader.readAsText(file);
+    },
+
+    // QR Код (генерация ссылки)
+    generateQR(plotId) {
+        const url = `${window.location.origin}${window.location.pathname}?plot=${plotId}`;
+        // В реальном проекте здесь был бы вызов API генерации QR изображения
+        alert(`QR код для участка ${plotId}:\n${url}\n(Ссылка скопирована)`);
+        navigator.clipboard.writeText(url);
+    },
+
+    // Уведомления
+    showToast(message, type = 'info') {
+        const container = document.getElementById('toastContainer');
+        const toast = document.createElement('div');
+        toast.className = 'toast';
+        toast.style.borderLeftColor = type === 'error' ? 'var(--danger)' : (type === 'success' ? 'var(--primary)' : 'var(--secondary)');
+        toast.innerHTML = `<i class="fas fa-${type === 'error' ? 'exclamation-circle' : 'check-circle'}"></i> ${message}`;
+        
+        container.appendChild(toast);
+        setTimeout(() => toast.remove(), 3000);
+    },
+
+    setupEventListeners() {
+        // Автообновление погоды при движении карты
+        let moveTimeout;
+        this.map.on('moveend', () => {
+            clearTimeout(moveTimeout);
+            moveTimeout = setTimeout(() => this.loadWeather(), 1000);
+        });
+    }
+};
+
+// Запуск приложения
+document.addEventListener('DOMContentLoaded', () => {
+    app.init();
+});
+</script>
+
+<!-- ВСТРОЕННЫЕ ДАННЫЕ (GeoJSON) -->
+<script type="application/json" id="embeddedGeoJSON">
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": { "PlotID": "Q-01", "Crop": "Яблоня", "area_ha": 12.5 },
+      "geometry": { "type": "Polygon", "coordinates": [[[38.95, 45.03], [38.96, 45.03], [38.96, 45.04], [38.95, 45.04], [38.95, 45.03]]] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "PlotID": "Q-02", "Crop": "Груша", "area_ha": 8.2 },
+      "geometry": { "type": "Polygon", "coordinates": [[[38.96, 45.03], [38.97, 45.03], [38.97, 45.04], [38.96, 45.04], [38.96, 45.03]]] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "PlotID": "Q-03", "Crop": "Вишня", "area_ha": 15.0 },
+      "geometry": { "type": "Polygon", "coordinates": [[[38.95, 45.04], [38.96, 45.04], [38.96, 45.05], [38.95, 45.05], [38.95, 45.04]]] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "PlotID": "Q-04", "Crop": "Яблоня", "area_ha": 10.1 },
+      "geometry": { "type": "Polygon", "coordinates": [[[38.96, 45.04], [38.97, 45.04], [38.97, 45.05], [38.96, 45.05], [38.96, 45.04]]] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "PlotID": "Q-05", "Crop": "Черешня", "area_ha": 6.5 },
+      "geometry": { "type": "Polygon", "coordinates": [[[38.97, 45.03], [38.98, 45.03], [38.98, 45.04], [38.97, 45.04], [38.97, 45.03]]] }
+    }
+  ]
+}
+</script>
+
+<!-- ВСТРОЕННЫЕ ДАННЫЕ (CSV) -->
+<script type="text/csv" id="embeddedCSV">
+PlotID,Cluster,Crop,Variety,Trees,Age,Area_ha
+Q-01,North,Яблоня,Голден,1200,5,12.5
+Q-02,North,Груша,Конференция,800,7,8.2
+Q-03,South,Вишня,Шпанка,1500,10,15.0
+Q-04,South,Яблоня,Фуджи,950,4,10.1
+Q-05,East,Черешня,Регина,600,6,6.5
+</script>
+
 </body>
 </html>
