@@ -1,10 +1,13 @@
 {
-  "name": "agro-app",
-  "version": "1.0.0",
-  "description": "Гео-сервис: Собрано в саду",
+  "name": "geo-service-garden",
+  "version": "2.0.0",
+  "description": "Интерактивная карта агрономических данных с расширенным функционалом",
   "type": "module",
   "scripts": {
     "start": "python3 -m http.server 8080",
     "test": "node --experimental-modules tests/app.test.js"
-  }
+  },
+  "keywords": ["agro", "gis", "leaflet", "map", "garden"],
+  "author": "",
+  "license": "MIT"
 }
